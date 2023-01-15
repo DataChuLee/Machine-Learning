@@ -39,7 +39,7 @@ output: html_notebook
 
 피쳐와 같은 데이터의 정보를 이용하여 라벨(연봉)과의 관계를 통해서 머신러닝의 모델을 학습하는 것이다.
 
-### Lecture Contents 
+### Lecture Contents
 
 **Supervised Learning (지도학습)**
 
@@ -57,7 +57,7 @@ output: html_notebook
 
 1.  입력값: 연속값(실수형), 이산값(범주형) 등 모두 가능
 2.  출력값: **연속값(실수형)**
-3.   모델 형태: 일반적인 함수 상태 (Ex. y = w1x+w0 --\> 머신러닝 **모델)**
+3.  모델 형태: 일반적인 함수 상태 (Ex. y = w1x+w0 --\> 머신러닝 **모델)**
 
 **분류(Classification)**
 

@@ -1,0 +1,169 @@
+---
+title: "Machine Learning(패캠,part6 ch2)"
+author: "Lee"
+date: "2023-01-09"
+output: html_document
+---
+
+1.  **K-Nearest Neighbor 개념**
+
+-   가장 가까이 있는 데이터를 클래스에 속한다고 보는 방법
+
+-   가까이 있는 데이터 1개를 보면 1- 최근접 이웃
+
+-   가까이 있는 데이터 k개를 보면 k- 최근접 이웃
+
+-   유클리디안 거리를 사용하므로 피쳐는 연속형 변수이어야 한다.
+
+-   **인풋(피쳐 정보) --\> KNN** **--\> 아웃풋(속하는 그룹)**
+
+2.  **Caret 패키지 소개**
+
+-   데이터를 이용해 머신러닝을 쉽게 할 수 있도록 도와주는 패키지
+
+3.  **Caret 패키지 설치**
+
+```{r}
+install.packages("caret", dependencies = TRUE)
+library(caret)
+```
+
+4.  **Caret 함수 소개**
+
+-   trainControl( ): 데이터 훈련(train)과정의 파라미터(parameter) 설정
+
+``` r
+# Ex
+trainControl(
+          method = "repeatedcv"  # cross-validation 반복
+          number = 10            # 훈련 데이터 fold 갯수
+          repeats = 5            # cv 반복횟수 
+)
+```
+
+-   expand.grid( ): 모든 벡터 혹은 인자(factor)조합인 데이터 프레임 생성
+
+```{r}
+expand.grid(k=1:10)
+```
+
+-   train( ): 머신러닝 알고리즘 이용해 데이터학습을 통한 모델 생성
+
+```{r}
+train(
+    Class~., # 타켓~피쳐
+    data = train, # 적용할 데이터
+    method = "knn", # 사용하고 싶은 머신러닝 방법 
+    trControl = trainControl(), # 학습 방법 
+    preProcess = c("center","scale"), # 데이터 전처리 방법 : 표준화
+    tuneGrid = expand.grid(k = 1:10), # 튜닝 파라미터 값 목록 
+    metric = "Accuracy" # 모형 평가 방식
+)
+```
+
+5.  Accuracy VS Kappa 통계량 (모형 평가 방식)
+
+|                  |     | 실제(Reference) | 실제(Reference) |
+|------------------|-----|-----------------|-----------------|
+|                  |     | 1               | 2               |
+| 예측(Prediction) | 1   | a               | b               |
+| 예측(Prediction) | 2   | c               | d               |
+
+-   정확도(Accuracy) = a + d / a + b + c + d
+
+    -   kappa 통계량 = P~0~ - P~e~ / 1 - P~e~ --\> P~e~ : 관측된 정확도 , P~0~ : 기대 정확도(Accuracy)
+
+        <div>
+
+        P~e~ = P~1~ + P~2~ (관측된 정확도)
+
+        P~1~ = 예측과 실제가 모두 1인 확률
+
+        = P(예측 =1) \* P(실제 = 1)
+
+        = (a + b / a + b + c + d) \* (a + c / a + b + c + d)
+
+        P~2~ = 예측과 실제가 모두 2인 확률
+
+        = P(예측 =2) \* P(실제 = 2)
+
+        = (c + d / a + b + c + d) \* (b + d / a + b + c + d)
+
+        </div>
+
+-   Accuracy vs Kappa 통계량
+
+    -   Accuracy : 0\<정확도\<1 , 1에 가까울 수록 좋다
+
+    -   Kappa 통계량 : -1\< Kappa 통계량 \< 1 , 1에 가까울 수록 좋다
+
+6.  KNN 실습 (와인 데이터를 이용한 실습)
+
+-   데이터 불러오기
+
+```{r}
+library(tidyverse)
+rawdata <- read.csv(file = "Date/wine.csv", header = T) # 와인데이터를 csv형태로 불러오기, 변수명 존재한채로 
+rawdata %>% glimpse() # 와인데이터 변수명 및 형태 확인 
+rawdata$Class <- as.factor(rawdata$Class) # Class 변수는 현재 숫자형 데이터이기 떄문에 범주형 형태로 변환하는 전처리
+rawdata %>% glimpse() # 구조 확인 (Class가 factor 인지)
+```
+
+-   전체 데이터 -\> 트레이닝 데이터와 테스트 데이터 분할과정
+
+```{r}
+analdata <- rawdata # rawdata의 백업 data 설정 
+
+# 랜덤으로 뽑아야 하지만 기준이 필요하기 때문에 set.seed()함수 이용 
+set.seed(2023) 
+
+# analdata -> 전체 데이터 中 train과 test를 7:3 비율로 뽑을 것이다.
+# nrow(): 데이터 행의 수 
+# sort(): 오름차순 정렬
+# sample(a,b): 1부터 a까지 숫자 중에 b개 추출 
+datatotal <- sort(sample(nrow(analdata), nrow(analdata)*0.7))
+train <- analdata[datatotal,]
+test <- analdata[-datatotal,]
+
+# train과 test로 나눈 뒤, 각 변수의 x와 y로 분할 / 피쳐와 타겟변수를 나누기 위해서이다.  
+train_x <- train[,1:13]
+train_y <- train[,14]
+
+test_x <- test[,1:13]
+test_y <- test[,14]
+```
+
+-   모형학습
+
+```{r}
+ctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+customGrid <- expand.grid(k = 1:10)
+knnFit <- train(Class~.,
+                data = train,
+                method = "knn",
+                trControl = ctrl,
+                preProcess = c("center","scale"),
+                tuneGrid = customGrid,
+                metric = "Accuracy")
+ # 최적의 k = 7일때, 정확도가 가장 높은 것을 알 수있으며, 97.5%의 정확도를 가진다. 
+knnFit
+plot(knnFit) # 그것을 그래프화 시키면, 더 쉽게 알 수 있다.
+```
+
+-   예측
+
+```{r}
+# 위에서 만든 모형을 가지고 예측(test data를 이용)
+pred_test <- predict(knnFit,newdata = test)
+
+# confusionMatrix()함수: 분할표
+confusionMatrix(pred_test, test$Class) 
+```
+
+-   변수(피쳐)중요도
+
+```{r}
+importance_knn <-varImp(knnFit, scale = FALSE)
+# plot 이나 위의 코드에서 알 수 있듯이, Flavanoids변수가 Class변수에 가장 중요하다는 것을 알 수 있으며, 그 다음 순차적으로 변수의 중요성을 인식할 수 있다.
+plot(importance_knn)
+```
